@@ -121,25 +121,32 @@ export class NatsJetStreamServer
   private async setupStream() {
     const { streamConfig } = this.options;
     const streams = await this.jsm.streams.list().next();
-    const stream = streams.find(
-      (stream) => stream.config.name === streamConfig.name,
-    );
 
-    if (stream) {
-      const streamSubjects = new Set([
-        ...stream.config.subjects,
-        ...streamConfig.subjects,
-      ]);
+    const streamConfigs = !Array.isArray(streamConfig)
+      ? [streamConfig]
+      : streamConfig;
 
-      const streamInfo = await this.jsm.streams.update(stream.config.name, {
-        ...stream.config,
-        ...streamConfig,
-        subjects: [...streamSubjects.keys()],
-      });
-      this.logger.log(`Stream ${streamInfo.config.name} updated`);
-    } else {
-      const streamInfo = await this.jsm.streams.add(streamConfig);
-      this.logger.log(`Stream ${streamInfo.config.name} created`);
+    for (const streamCfg of streamConfigs) {
+      const stream = streams.find(
+        (stream) => stream.config.name === streamCfg.name,
+      );
+
+      if (stream) {
+        const streamSubjects = new Set([
+          ...stream.config.subjects,
+          ...streamCfg.subjects,
+        ]);
+
+        const streamInfo = await this.jsm.streams.update(stream.config.name, {
+          ...stream.config,
+          ...streamCfg,
+          subjects: [...streamSubjects.keys()],
+        });
+        this.logger.log(`Stream ${streamInfo.config.name} updated`);
+      } else {
+        const streamInfo = await this.jsm.streams.add(streamCfg);
+        this.logger.log(`Stream ${streamInfo.config.name} created`);
+      }
     }
   }
 }
